@@ -4,16 +4,26 @@
     "express": "^4.21.2",
     "morgan": "^1.10.0",
     "pg": "^8.13.1",
-    "typescript": "^5.7.2"
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.4",
     "@types/express": "^4.17.17",
     "@types/morgan": "^1.9.4",
     "@types/pg": "^8.6.7",
-    "ts-node-dev": "^2.0.0"
+    "@types/ws": "^8.5.14",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.7.3"
   },
   "scripts": {
     "dev": "ts-node-dev --respawn src/server.ts"
-  }
+  },
+  "name": "inventory-management-api",
+  "description": "the API for inventory management system built with raspberry pi",
+  "version": "1.0.0",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
