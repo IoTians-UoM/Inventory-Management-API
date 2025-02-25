@@ -43,7 +43,7 @@ const inventory: Record<string, InventoryItem> = {};
 
 // Create WebSocket server
 const wss = new WebSocketServer({ port: 8000 }, () => {
-  console.log('WebSocket server started on ws://localhost:8000');
+  console.log('WebSocket server started on ws://192.168.112.97:8000');
 });
 
 // Handle connection
