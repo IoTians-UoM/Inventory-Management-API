@@ -33,6 +33,12 @@ enum Action {
     MODE_SWITCH = "mode_switch",
 }
 
+enum Component {
+    WEB = 'web',
+    IOT = 'iot',
+    API = 'api',
+}
+
 enum Mode {
     INVENTORY_IN = "inventory_in",
     INVENTORY_OUT = "inventory_out",
@@ -42,6 +48,7 @@ enum Mode {
 type Message = {
     action: Action,
     type: Type,
+    component: Component,
     message_id: string,
     payload?: ProductPayload | InventoryPayload | ModeSwitch | SyncPayload | string,
     status?:Status,
