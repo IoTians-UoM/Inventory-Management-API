@@ -1,4 +1,4 @@
-import { Message, Product, Status, Action, ProductPayload, Type, InventoryItem, InventoryPayload } from './types/types';
+import { Message, Product, Status, Action, ProductPayload, Type, InventoryItem, InventoryPayload, ModeSwitch } from './types/types';
 import {config} from "dotenv";
 import { initWSServer, sendWSMessage } from './utils/websocket-server';
 import {
@@ -21,6 +21,7 @@ config();
 const PORT = parseInt(process.env.PORT || '') || 8000;
 const db = initDB();
 const ws = initWSServer(PORT, handleMessage);
+let mode;
 
 async function handleMessage(msg: Message): Promise<void> {
   switch (msg.action) {
@@ -56,6 +57,9 @@ async function handleMessage(msg: Message): Promise<void> {
       break;
     case Action.INVENTORY_OUT:
       await handleInventoryOut(msg);
+      break;
+    case Action.MODE_SWITCH:
+      mode = (msg.payload as ModeSwitch).mode;
       break;
     default:
       // sendError(`Unsupported message type: ${msg.action}`, msg.action);
