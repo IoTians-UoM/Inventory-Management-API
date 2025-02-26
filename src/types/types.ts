@@ -3,21 +3,34 @@ enum Status {
     ERROR = "error",
 }
 
-enum Action {
-    ADD_EDIT = "add_edit",
-    DELETE = "delete",
+enum Type {
+    REQUEST = "request",
+    RESPONSE = "response",
 }
 
-enum Type {
-    TAG_WRITE_REQ = "tag_write_req",
-    TAG_WRITE_RESP = "tag_write_resp",
-    SYNC = "sync",
-    PRODUCT = "product",
-    INVENTORY = "inventory",
-    PRODUCT_BY_ID = "product_by_id",
-    INVENTORY_BY_ID = "inventory_by_id",
+enum Action {
+    // Product Actions
+    PRODUCT_ADD_EDIT = "product_add_edit",
+    PRODUCT_DELETE = "product_delete",
+    PRODUCT_GET_ALL = "product_get_all",
+    PRODUCT_GET_BY_ID = "product_get_by_id",
+
+    // Inventory Actions
+    INVENTORY_ADD_EDIT = "inventory_add_edit",
+    INVENTORY_DELETE = "inventory_delete",
+    INVENTORY_GET_ALL = "inventory_get_all",
+    INVENTORY_GET_BY_ID = "inventory_get_by_id",
     INVENTORY_IN = "inventory_in",
     INVENTORY_OUT = "inventory_out",
+
+    // Tag Write Actions
+    TAG_WRITE = "tag_write",
+
+    // Sync Actions
+    SYNC = "sync",
+
+    // Mode Switch
+    MODE_SWITCH = "mode_switch",
 }
 
 enum Mode {
@@ -27,11 +40,12 @@ enum Mode {
 }
 
 type Message = {
-    type:Type,
+    action: Action,
+    type: Type,
     message_id: string,
-    data: Product | InventoryItem | ProductAction | InventoryAction | ModeSwitch | Product[] | InventoryItem[] | string,
-    status:Status,
-    timestamp:string,
+    payload?: ProductPayload | InventoryPayload | ModeSwitch | SyncPayload | string,
+    status?:Status,
+    timestamp: string,
 }
 
 type Product = {
@@ -49,17 +63,15 @@ type InventoryItem = {
     timestamp: string,
 }
 
-type ProductAction = {
+type ProductPayload = {
     product_id?: string,
-    action: Action,
-    product?: Product,
+    products?: Product[],
     timestamp: string,
 }
 
-type InventoryAction = {
+type InventoryPayload = {
     inventory_id?: string,
-    action: Action,
-    inventory_item?: InventoryItem,
+    inventory_items?: InventoryItem[],
     timestamp: string,
 }
 
@@ -68,5 +80,11 @@ type ModeSwitch = {
     timestamp: string,
 }
 
+type SyncPayload = {
+    products: Product[],
+    inventory: InventoryItem[],
+    timestamp: string,
+}   
 
-export {Status, Action, Type, Mode, Message, Product, InventoryItem, ProductAction, InventoryAction, ModeSwitch}
+
+export {Status, Type, Action, Mode, Message, Product, InventoryItem, ProductPayload, InventoryPayload, ModeSwitch, SyncPayload};
