@@ -1,6 +1,6 @@
-import { Message, Product, Status, Action, ProductPayload, Type } from './types/types';
+import { Message, Product, Status, Action, ProductPayload, Type, InventoryItem, InventoryPayload } from './types/types';
 import {config} from "dotenv";
-import {initDB} from "./utils/db-connector";
+import {addProduct, getAllProducts,getProductById,deleteProduct, initDB, updateProduct, getInventory, updateInventoryItem, addInventoryItem,deleteInventoryItem,getInventoryById} from "./utils/db-connector";
 import { initWSServer, sendWSMessage } from './utils/websocket-server';
 
 config();
@@ -8,24 +8,43 @@ const PORT = parseInt(process.env.PORT || '') || 8000;
 const db = initDB();
 const ws = initWSServer(PORT, handleMessage);
 
-function handleMessage(msg: Message): void {
+async function handleMessage(msg: Message): Promise<void> {
   switch (msg.action) {
     case Action.PRODUCT_GET_ALL:
-      handleProductGetAll(msg);
+      await handleProductGetAll(msg);
       break;
     case Action.INVENTORY_GET_ALL:
-      handleInventoryGetAll(msg);
+      await handleInventoryGetAll(msg);
       break;
+    case Action.PRODUCT_ADD_EDIT:
+      await handleProductAddEdit(msg);
+      break;
+    case Action.PRODUCT_GET_BY_ID:
+      await handleProductGetById(msg);
+      break;
+    case Action.PRODUCT_DELETE:
+      await handleProductDelete(msg);
+      break;
+    case Action.INVENTORY_GET_ALL:
+      await handleInventoryGetAll(msg);
+      break;
+    case Action.INVENTORY_ADD_EDIT:
+      await handleInventoryAddEdit(msg);
+      break;
+    case Action.INVENTORY_DELETE: 
+      await handleInventoryDelete(msg);
+      break;
+    case Action.INVENTORY_GET_BY_ID: 
+      await handleInventoryGetById(msg);
+      break;
+
     default:
       sendError(`Unsupported message type: ${msg.action}`, msg.action);
   }
 }
 
-function handleProductGetAll(msg: Message): void {
-  const products:Product[] = [
-    { id: '1', name: 'Product 1', price: 10, quantity: 10, timestamp: new Date().toISOString() },
-    { id: '2', name: 'Product 2', price: 20, quantity: 20, timestamp: new Date().toISOString() }
-  ]
+async function handleProductGetAll(msg: Message): Promise<void> {
+  const products:Product[] = await getAllProducts();
 
   const message:Message = {
     action: Action.PRODUCT_GET_ALL,
@@ -39,12 +58,45 @@ function handleProductGetAll(msg: Message): void {
   sendWSMessage(message);
 }
 
-function handleInventoryGetAll(msg: Message): void {
+async function handleProductGetById(msg: Message): Promise<void> {
+  const { product_id } = msg.payload as ProductPayload;
+  const result = await getProductById(product_id!);
 
-  const inventory_items = [
-    { product_id: '1', product_name: 'Product 1', quantity: 10, timestamp: new Date().toISOString() },
-    { product_id: '2', product_name: 'Product 2', quantity: 20, timestamp: new Date().toISOString() }
-  ];
+  const message: Message = {
+    action: Action.PRODUCT_GET_BY_ID,
+    type: Type.RESPONSE,
+    message_id: msg.message_id,
+    payload: { products: result, timestamp: new Date().toISOString() },
+    status: Status.SUCCESS,
+    timestamp: new Date().toISOString()
+  };
+
+  sendWSMessage(message);
+}
+
+async function handleProductDelete(msg: Message): Promise<void> {
+  const { product_id } = msg.payload as ProductPayload;
+  const result = await deleteProduct(product_id!);
+
+  const message: Message = {
+    action: Action.PRODUCT_DELETE,
+    type: Type.RESPONSE,
+    message_id: msg.message_id,
+    payload: { product_id: product_id, timestamp: new Date().toISOString() },
+    status: Status.SUCCESS,
+    timestamp: new Date().toISOString()
+  };
+}
+
+
+
+
+
+
+
+async function handleInventoryGetAll(msg: Message): Promise<void> {
+
+  const inventory_items = await getInventory();
 
   const message:Message = {
     action: Action.INVENTORY_GET_ALL,
@@ -58,6 +110,102 @@ function handleInventoryGetAll(msg: Message): void {
   sendWSMessage(message);
 }
 
+
+async function handleProductAddEdit(msg: Message): Promise<void>{
+  const productPayload:ProductPayload=msg.payload as ProductPayload
+  const product:Product=productPayload.products![0]
+  if (productPayload.product_id){
+    const result = await updateProduct(product.id,product.name,product.price,product.quantity);
+    const message:Message = {
+      action: Action.PRODUCT_ADD_EDIT,
+      type: Type.RESPONSE,
+      message_id: msg.message_id,
+      status: Status.SUCCESS,
+      payload: {products:result, timestamp: new Date().toString()},
+      timestamp: new Date().toISOString()
+    };
+    sendWSMessage(message)
+  }else{
+    await addProduct(product.name,product.price,product.quantity);
+      const message:Message = {
+        action: Action.PRODUCT_ADD_EDIT,
+        type: Type.RESPONSE,
+        message_id: msg.message_id,
+        status: Status.SUCCESS,
+        timestamp: new Date().toISOString()
+      };
+      sendWSMessage(message)
+    }
+    
+  
+  }
+
+  async function handleInventoryAddEdit(msg: Message): Promise<void> {
+    const inventoryPayload = msg.payload as InventoryPayload;
+    const inventory_item = inventoryPayload.inventory_items![0];
+  
+    if (inventoryPayload.inventory_id) {
+      const result = await updateInventoryItem(inventoryPayload.inventory_id, inventory_item.product_id, inventory_item.product_name!, inventory_item.quantity);
+  
+      const message: Message = {
+        action: Action.INVENTORY_ADD_EDIT,
+        type: Type.RESPONSE,
+        message_id: msg.message_id,
+        payload: { inventory_items: result, timestamp: new Date().toISOString() },
+        status: Status.SUCCESS,
+        timestamp: new Date().toISOString()
+      };
+  
+      sendWSMessage(message);
+    } else {
+      const inventory_items = await addInventoryItem(inventory_item.product_id, inventory_item.product_name!, inventory_item.quantity);
+  
+      const message: Message = {
+        action: Action.INVENTORY_ADD_EDIT,
+        type: Type.RESPONSE,
+        message_id: msg.message_id,
+        status: Status.SUCCESS,
+        timestamp: new Date().toISOString()
+      };
+  
+      sendWSMessage(message);
+    }
+  }
+
+  async function handleInventoryDelete(msg: Message): Promise<void> {
+    const { inventory_id } = msg.payload as InventoryPayload;
+    const result = await deleteInventoryItem(inventory_id!);
+  
+    const message: Message = {
+      action: Action.INVENTORY_DELETE,
+      type: Type.RESPONSE,
+      message_id: msg.message_id,
+      payload: { inventory_id, timestamp : new Date().toISOString() },
+      status: Status.SUCCESS,
+      timestamp: new Date().toISOString()
+    };
+    sendWSMessage(message);}
+
+    async function handleInventoryGetById(msg: Message): Promise<void> {
+      const { inventory_id } = msg.payload as InventoryPayload;
+      const result = await getInventoryById(inventory_id!);
+    
+      const message: Message = {
+        action: Action.INVENTORY_GET_BY_ID,
+        type: Type.RESPONSE,
+        message_id: msg.message_id,
+        payload: { inventory_items: result, timestamp: new Date().toISOString() },
+        status: Status.SUCCESS,
+        timestamp: new Date().toISOString()
+      };
+    
+      sendWSMessage(message);
+
+
+
+
+  
+
 function sendError(message: string, action:Action): void {
   const error:Message = {
     type: Type.RESPONSE,
@@ -69,4 +217,8 @@ function sendError(message: string, action:Action): void {
   };
 
   sendWSMessage(error);
+}}
+
+function sendError(arg0: string, action: Action) {
+  throw new Error('Function not implemented.');
 }
