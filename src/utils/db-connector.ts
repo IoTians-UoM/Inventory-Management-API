@@ -137,5 +137,31 @@ const inventoryDecrement = async (id: string, quantity: number): Promise<Invento
     return result.rows;
 }
 
+const syncDB = async (products: Product[], inventory: InventoryItem[]): Promise<void> => {
+    for (const product of products) {
+        const existingProduct = await getProductById(product.id.toString());
+        if (existingProduct.length === 0) {
+            await addProduct(product.name, product.price, product.quantity);
+        } else {
+            const existing = existingProduct[0];
+            if (existing.name !== product.name || existing.price !== product.price || existing.quantity !== product.quantity) {
+                await updateProduct(product.id.toString(), product.name, product.price, product.quantity);
+            }
+        }
+    }
 
-export { getAllProducts, getProductById, addProduct, updateProduct, deleteProduct, getInventory, addInventoryItem, updateInventoryItem, deleteInventoryItem, getInventoryById, inventoryIncrement, inventoryDecrement };
+    for (const item of inventory) {
+        const existingInventoryItem = await getInventoryById(item.product_id.toString());
+        if (existingInventoryItem.length === 0) {
+            await addInventoryItem(item.product_id.toString(), item.product_name!, item.quantity);
+        } else {
+            const existing = existingInventoryItem[0];
+            if (existing.product_name !== item.product_name || existing.quantity !== item.quantity) {
+                await updateInventoryItem(item.product_id.toString(), item.product_id.toString(), item.product_name!, item.quantity);
+            }
+        }
+    }
+}
+
+
+export { getAllProducts, getProductById, addProduct, updateProduct, deleteProduct, getInventory, addInventoryItem, updateInventoryItem, deleteInventoryItem, getInventoryById, inventoryIncrement, inventoryDecrement, syncDB };

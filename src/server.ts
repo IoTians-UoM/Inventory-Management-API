@@ -1,4 +1,4 @@
-import { Message, Product, Status, Action, ProductPayload, Type, InventoryItem, InventoryPayload, ModeSwitch } from './types/types';
+import { Message, Product, Status, Action, ProductPayload, Type, InventoryItem, InventoryPayload, ModeSwitch, SyncPayload } from './types/types';
 import {config} from "dotenv";
 import { initWSServer, sendWSMessage } from './utils/websocket-server';
 import {
@@ -14,7 +14,8 @@ import {
   deleteInventoryItem,
   getInventoryById,
   inventoryIncrement,
-  inventoryDecrement
+  inventoryDecrement,
+  syncDB
 } from "./utils/db-connector";
 
 config();
@@ -60,6 +61,9 @@ async function handleMessage(msg: Message): Promise<void> {
       break;
     case Action.MODE_SWITCH:
       mode = (msg.payload as ModeSwitch).mode;
+      break;
+    case Action.SYNC:
+      await handleSync(msg);
       break;
     default:
       // sendError(`Unsupported message type: ${msg.action}`, msg.action);
@@ -256,6 +260,21 @@ async function handleProductAddEdit(msg: Message): Promise<void>{
         timestamp: new Date().toISOString()
       };
 
+      sendWSMessage(message);
+    }
+
+    async function handleSync(msg: Message): Promise<void> {
+      const { products, inventory } = msg.payload as SyncPayload;
+      await syncDB(products, inventory);
+    
+      const message: Message = {
+        action: Action.SYNC,
+        type: Type.RESPONSE,
+        message_id: msg.message_id,
+        status: Status.SUCCESS,
+        timestamp: new Date().toISOString()
+      };
+    
       sendWSMessage(message);
     }
     
