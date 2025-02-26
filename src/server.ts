@@ -1,7 +1,21 @@
 import { Message, Product, Status, Action, ProductPayload, Type, InventoryItem, InventoryPayload } from './types/types';
 import {config} from "dotenv";
-import {addProduct, getAllProducts,getProductById,deleteProduct, initDB, updateProduct, getInventory, updateInventoryItem, addInventoryItem,deleteInventoryItem,getInventoryById} from "./utils/db-connector";
 import { initWSServer, sendWSMessage } from './utils/websocket-server';
+import {
+  addProduct, 
+  getAllProducts,
+  getProductById,
+  deleteProduct, 
+  initDB, 
+  updateProduct, 
+  getInventory, 
+  updateInventoryItem, 
+  addInventoryItem,
+  deleteInventoryItem,
+  getInventoryById,
+  inventoryIncrement,
+  inventoryDecrement
+} from "./utils/db-connector";
 
 config();
 const PORT = parseInt(process.env.PORT || '') || 8000;
@@ -37,9 +51,14 @@ async function handleMessage(msg: Message): Promise<void> {
     case Action.INVENTORY_GET_BY_ID: 
       await handleInventoryGetById(msg);
       break;
-
+    case Action.INVENTORY_IN:
+      await handleInventoryIn(msg);
+      break;
+    case Action.INVENTORY_OUT:
+      await handleInventoryOut(msg);
+      break;
     default:
-      sendError(`Unsupported message type: ${msg.action}`, msg.action);
+      // sendError(`Unsupported message type: ${msg.action}`, msg.action);
   }
 }
 
@@ -200,25 +219,39 @@ async function handleProductAddEdit(msg: Message): Promise<void>{
       };
     
       sendWSMessage(message);
+    }
 
+    async function handleInventoryIn(msg: Message): Promise<void> {
+      const { inventory_id, inventory_items } = msg.payload as InventoryPayload;
+      const { quantity } = inventory_items![0];
+      const result = await inventoryIncrement(inventory_id!, quantity);
+    
+      const message: Message = {
+        action: Action.INVENTORY_IN,
+        type: Type.RESPONSE,
+        message_id: msg.message_id,
+        payload: { inventory_items: result, timestamp: new Date().toISOString() },
+        status: Status.SUCCESS,
+        timestamp: new Date().toISOString()
+      };
+    
+      sendWSMessage(message);
+    }
 
+    async function handleInventoryOut(msg: Message): Promise<void> {
+      const { inventory_id, inventory_items } = msg.payload as InventoryPayload;
+      const { quantity } = inventory_items![0];
+      const result = await inventoryDecrement(inventory_id!, quantity);
 
+      const message: Message = {
+        action: Action.INVENTORY_OUT,
+        type: Type.RESPONSE,
+        message_id: msg.message_id,
+        payload: { inventory_items: result, timestamp: new Date().toISOString() },
+        status: Status.SUCCESS,
+        timestamp: new Date().toISOString()
+      };
 
-  
-
-function sendError(message: string, action:Action): void {
-  const error:Message = {
-    type: Type.RESPONSE,
-    action,
-    message_id: 'error',
-    payload: message,
-    status: Status.ERROR,
-    timestamp: new Date().toISOString()
-  };
-
-  sendWSMessage(error);
-}}
-
-function sendError(arg0: string, action: Action) {
-  throw new Error('Function not implemented.');
-}
+      sendWSMessage(message);
+    }
+    

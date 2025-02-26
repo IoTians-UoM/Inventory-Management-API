@@ -125,5 +125,17 @@ const getInventoryById = async (id: string): Promise<InventoryItem[]> => {
     return result.rows;
 }
 
+const inventoryIncrement = async (id: string, quantity: number): Promise<InventoryItem[]> => {
+    const query = 'UPDATE inventory SET quantity = quantity + $2 WHERE id = $1 RETURNING *';
+    const result = await client.query(query, [id, quantity]);
+    return result.rows;
+}
 
-export { getAllProducts, getProductById, addProduct, updateProduct, deleteProduct, getInventory, addInventoryItem, updateInventoryItem, deleteInventoryItem,getInventoryById };
+const inventoryDecrement = async (id: string, quantity: number): Promise<InventoryItem[]> => {
+    const query = 'UPDATE inventory SET quantity = quantity - $2 WHERE id = $1 RETURNING *';
+    const result = await client.query(query, [id, quantity]);
+    return result.rows;
+}
+
+
+export { getAllProducts, getProductById, addProduct, updateProduct, deleteProduct, getInventory, addInventoryItem, updateInventoryItem, deleteInventoryItem, getInventoryById, inventoryIncrement, inventoryDecrement };
