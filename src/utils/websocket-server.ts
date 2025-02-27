@@ -2,12 +2,12 @@ import { WebSocketServer } from "ws";
 import { Message } from "../types/types";
 
 let webSocketServer:WebSocketServer;
-let webSocketServerClient:any;
+let webSocketServerClients:any[] = [];
 
-export const initWSServer = (port:number, handleMessage:Function):WebSocket => {
-    if(webSocketServer && webSocketServerClient){
+export const initWSServer = (port:number, handleMessage:Function):WebSocket[] => {
+    if(webSocketServer && webSocketServerClients.length){
         console.log('Returning existing WebSocket server');
-        return webSocketServerClient;
+        return webSocketServerClients;
     }
 
     webSocketServer = new WebSocketServer({ port }, () => {
@@ -16,7 +16,7 @@ export const initWSServer = (port:number, handleMessage:Function):WebSocket => {
 
     webSocketServer.on('connection', (ws) => {
         console.log('Client connected.');
-        webSocketServerClient = ws;
+        webSocketServerClients.push(ws);
 
         ws.on('message', (message:string) => {
             console.log(`Received: ${message}`);
@@ -38,12 +38,14 @@ export const initWSServer = (port:number, handleMessage:Function):WebSocket => {
         });
     });
 
-    return webSocketServerClient;
+    return webSocketServerClients;
 }
 
 export const sendWSMessage = (message:Message):void => {
-    if(webSocketServerClient){
-        webSocketServerClient.send(JSON.stringify(message));
+    if(webSocketServerClients.length){
+        webSocketServerClients.forEach(ws=>{
+            ws.send(JSON.stringify(message));
+        })
     }
     else{
         console.error('WebSocket client not connected');

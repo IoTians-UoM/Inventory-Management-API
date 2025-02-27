@@ -85,7 +85,7 @@ const addProduct = async (name: string, price: number, quantity: number): Promis
 
 const updateProduct = async (id: string, name: string, price: number, quantity: number): Promise<Product[]> => {
     const query = 'UPDATE product SET name = $2, price = $3, quantity = $4 WHERE id = $1 RETURNING *';
-    const result = await client.query(query);
+    const result = await client.query(query, [id,name,price,quantity]);
     return result.rows;
 }
 
@@ -125,19 +125,33 @@ const getInventoryById = async (id: string): Promise<InventoryItem[]> => {
     return result.rows;
 }
 
-const inventoryIncrement = async (id: string, quantity: number): Promise<InventoryItem[]> => {
-    const query = 'UPDATE inventory SET quantity = quantity + $2 WHERE id = $1 RETURNING *';
-    const result = await client.query(query, [id, quantity]);
-    return result.rows;
+const inventoryDecrement = async (product_id:string, quantity: number, product_name:string): Promise<InventoryItem[]> => {
+    const checkStockQuery = `SELECT quantity,price FROM product WHERE id = $1;`;
+
+    const p = (await client.query(checkStockQuery, [product_id])).rows[0]
+    if(quantity<p.quantity){
+        const result1 = await updateProduct(product_id, product_name, p.price, p.quantity - quantity)
+        const result2 = await addInventoryItem(product_id, product_name, quantity)
+        return result2
+    }
+
+    return [];
 }
 
-const inventoryDecrement = async (id: string, quantity: number): Promise<InventoryItem[]> => {
-    const query = 'UPDATE inventory SET quantity = quantity - $2 WHERE id = $1 RETURNING *';
-    const result = await client.query(query, [id, quantity]);
-    return result.rows;
+const inventoryIncrement = async (product_id:string, quantity: number, product_name:string): Promise<InventoryItem[]> => {
+    const checkStockQuery = `SELECT quantity FROM product WHERE id = $1;`;
+
+    const p = (await client.query(checkStockQuery, [product_id])).rows[0]
+    if(quantity<p.quantity){
+        const result1 = await updateProduct(product_id, product_name, p.price, p.quantity + quantity)
+        const result2 = await addInventoryItem(product_id, product_name, quantity)
+        return result2
+    }
+
+    return [];
 }
 
-const syncDB = async (products: Product[], inventory: InventoryItem[]): Promise<void> => {
+const syncDB = async (products: Product[], inventory: InventoryItem[]): Promise<{products:Product[],inventory:InventoryItem[]}> => {
     for (const product of products) {
         const existingProduct = await getProductById(product.id.toString());
         if (existingProduct.length === 0) {
@@ -161,6 +175,10 @@ const syncDB = async (products: Product[], inventory: InventoryItem[]): Promise<
             }
         }
     }
+
+    const p = await getAllProducts()
+    const i = await getInventory()
+    return {products:p, inventory:i}
 }
 
 

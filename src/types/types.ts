@@ -48,7 +48,7 @@ enum Mode {
 type Message = {
     action: Action,
     type: Type,
-    component: Component,
+    component?: Component,
     message_id: string,
     payload?: ProductPayload | InventoryPayload | ModeSwitch | SyncPayload | string,
     status?:Status,
@@ -94,4 +94,4 @@ type SyncPayload = {
 }   
 
 
-export {Status, Type, Action, Mode, Message, Product, InventoryItem, ProductPayload, InventoryPayload, ModeSwitch, SyncPayload};
+export {Status, Type, Action, Mode, Message, Product, InventoryItem, ProductPayload, InventoryPayload, ModeSwitch, SyncPayload, Component};

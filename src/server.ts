@@ -1,4 +1,4 @@
-import { Message, Product, Status, Action, ProductPayload, Type, InventoryItem, InventoryPayload, ModeSwitch, SyncPayload } from './types/types';
+import { Message, Product, Status, Action, ProductPayload, Type, InventoryItem, InventoryPayload, ModeSwitch, SyncPayload, Component } from './types/types';
 import {config} from "dotenv";
 import { initWSServer, sendWSMessage } from './utils/websocket-server';
 import {
@@ -65,10 +65,32 @@ async function handleMessage(msg: Message): Promise<void> {
     case Action.SYNC:
       await handleSync(msg);
       break;
+    case Action.TAG_WRITE:
+      handleTagWriteRequest(msg)
+      break
     default:
       // sendError(`Unsupported message type: ${msg.action}`, msg.action);
   }
 }
+
+
+async function handleTagWriteRequest(msg:Message):Promise<void> {
+
+  const product_id = msg.payload
+  const product = await getProductById(product_id!.toString())
+
+  const message:Message = {
+    action: Action.TAG_WRITE,
+    type: Type.REQUEST,
+    message_id: msg.message_id,
+    timestamp: Date.now().toString(),
+    component:Component.IOT,
+    payload: {products:product, timestamp:Date.now().toString(), product_id:product_id?.toString()}
+  }
+  
+  sendWSMessage(message)
+}
+
 
 async function handleProductGetAll(msg: Message): Promise<void> {
   const products:Product[] = await getAllProducts();
@@ -230,9 +252,9 @@ async function handleProductAddEdit(msg: Message): Promise<void>{
     }
 
     async function handleInventoryIn(msg: Message): Promise<void> {
-      const { inventory_id, inventory_items } = msg.payload as InventoryPayload;
-      const { quantity } = inventory_items![0];
-      const result = await inventoryIncrement(inventory_id!, quantity);
+      const { inventory_items } = msg.payload as InventoryPayload;
+      const { quantity, product_name, product_id } = inventory_items![0];
+      const result = await inventoryIncrement(product_id, quantity, product_name!);
     
       const message: Message = {
         action: Action.INVENTORY_IN,
@@ -248,8 +270,8 @@ async function handleProductAddEdit(msg: Message): Promise<void>{
 
     async function handleInventoryOut(msg: Message): Promise<void> {
       const { inventory_id, inventory_items } = msg.payload as InventoryPayload;
-      const { quantity } = inventory_items![0];
-      const result = await inventoryDecrement(inventory_id!, quantity);
+      const {product_id, product_name, quantity} = inventory_items![0];
+      const result = await inventoryDecrement(product_id,quantity, product_name!);
 
       const message: Message = {
         action: Action.INVENTORY_OUT,
@@ -264,14 +286,15 @@ async function handleProductAddEdit(msg: Message): Promise<void>{
     }
 
     async function handleSync(msg: Message): Promise<void> {
-      const { products, inventory } = msg.payload as SyncPayload;
-      await syncDB(products, inventory);
+      const { products:p, inventory:i } = msg.payload as SyncPayload;
+      const {products,inventory} = await syncDB(p, i);
     
       const message: Message = {
         action: Action.SYNC,
         type: Type.RESPONSE,
         message_id: msg.message_id,
         status: Status.SUCCESS,
+        payload: {products, inventory, timestamp:Date.now().toString()} as SyncPayload,
         timestamp: new Date().toISOString()
       };
     
