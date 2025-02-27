@@ -165,7 +165,8 @@ const syncDB = async (products: Product[], inventory: InventoryItem[]): Promise<
     }
 
     for (const item of inventory) {
-        const existingInventoryItem = await getInventoryById(item.product_id.toString());
+        const existingInventoryItem = await getInventoryById(item.id);
+        console.log("sdc", existingInventoryItem)
         if (existingInventoryItem.length === 0) {
             await addInventoryItem(item.product_id.toString(), item.product_name!, item.quantity);
         } else {
